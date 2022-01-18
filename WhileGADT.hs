@@ -8,8 +8,16 @@ type Var = String
 type Z = Integer
 type  State = Var -> Z
 
-
+data Update = Var :=>: Z
 data Subst = Var :->: Exp Z
+
+data Stm = Ass Var (Exp Z)
+         | Skip
+         | Comp Stm Stm
+         | If (Exp Bool) Stm Stm
+         | While (Exp Bool) Stm
+         deriving Show
+
 
 data Exp a where 
     N :: Z -> Exp Z
@@ -23,6 +31,7 @@ data Exp a where
     Add :: Exp Z -> Exp Z -> Exp Z
     Mult :: Exp Z -> Exp Z -> Exp Z
     Sub :: Exp Z -> Exp Z -> Exp Z
+
 deriving instance Show (Exp a)
 
 eVal :: Exp a -> State -> a
@@ -72,16 +81,14 @@ substExp a s@(y :->: a1) = sub a
         sub (Neg b) = Neg (sub b)
         sub (And b1 b2) = And (sub b1) (sub b2)  
 
+fvStm :: Stm -> [Var]
+fvStm = nub . fv
+  where
+    fv (Ass x _) = [x]
+    fv (Skip) = [] 
+    fv (Comp stm1 stm2) = (fv stm1) ++ (fv stm2)  
+    fv (If b stm1 stm2) = (fvExp b) ++ (fv stm1) ++ (fv stm2)
+    fv (While b stm) = (fvExp b) ++ (fv stm)
 
 
-e :: Exp Z
-e = Add (V "x") (N 4)
 
-e1 :: Exp Bool
-e1 = Le (Add (N 3) (N 4)) (N 5)
-
-e2 = And (Eq (Add (V "y") (V "x")) (V "z")) (Neg (Le (V "x") (V "h")))
-
-s :: State
-s x = 5
-s _ = 0
